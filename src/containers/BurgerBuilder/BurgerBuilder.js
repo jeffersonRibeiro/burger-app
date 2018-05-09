@@ -18,16 +18,22 @@ const INGREDIENT_PRICES = {
 
 class BurgerBuilder extends Component {
   state = {
-    ingredients: {
-      salad: 0,
-      bacon: 0,
-      cheese: 0,
-      meat: 0,
-    },
+    ingredients: null,
     totalPrice: 4,
     purchasable: false,
     purchasing: false,
     loading: false,
+    error: false,
+  }
+
+  componentDidMount() {
+    axios.get('/ingredients.json')
+        .then(res => {
+          this.setState({ingredients: res.data});
+        })
+        .catch(error => {
+          this.setState({error: true});
+        });
   }
 
   updatePurchaseState() {
@@ -57,6 +63,7 @@ class BurgerBuilder extends Component {
     this.setState({totalPrice: newPrice, ingredients: updatedIngredients}, () => {
       this.updatePurchaseState();
     });
+
   }
 
   removeIngredientHandler = (type) => {
@@ -123,15 +130,37 @@ class BurgerBuilder extends Component {
       disabledInfo[key] = disabledInfo[key] <= 0;
     }
 
-    let orderSummary = <OrderSummary
+    let orderSummary = null;
+    
+    if(this.state.ingredients){
+      orderSummary = <OrderSummary
         ingredients={this.state.ingredients}
         price={this.state.totalPrice}
         purchaseCancelled={this.purchaseCancelHandler}
         purchaseContinued={this.purchaseContinueHandler}
       />
+    }
 
     if(!!this.state.loading){
       orderSummary = <Spinner />;
+    }
+
+    let burger = !!this.state.error ? <p>Ingredients can't be loaded!</p> : <Spinner />
+
+    if(!!this.state.ingredients){
+      burger = (
+        <React.Fragment>
+          <Burger ingredients={this.state.ingredients}/>
+          <BuildControls
+            ingredientAdded={this.addIngredientHandler}
+            ingredientRemoved={this.removeIngredientHandler}
+            disabled={disabledInfo}
+            purchasable={this.state.purchasable}
+            ordered={this.purchaseHandler}
+            price={this.state.totalPrice}
+          />
+        </React.Fragment>
+      );
     }
 
     return(
@@ -139,15 +168,7 @@ class BurgerBuilder extends Component {
         <Modal show={this.state.purchasing} modalClosed={this.purchaseCancelHandler}>
           {orderSummary}
         </Modal>
-        <Burger ingredients={this.state.ingredients}/>
-        <BuildControls
-          ingredientAdded={this.addIngredientHandler}
-          ingredientRemoved={this.removeIngredientHandler}
-          disabled={disabledInfo}
-          purchasable={this.state.purchasable}
-          ordered={this.purchaseHandler}
-          price={this.state.totalPrice}
-        />
+        {burger}
       </React.Fragment>
     );
   }
