@@ -5,6 +5,7 @@ import Burger from '../../components/Burger/Burger';
 import BuildControls from '../../components/Burger/BuildControls/BuildControls';
 import Modal from '../../components/UI/Modal/Modal';
 import OrderSummary from '../../components/Burger/OrderSummary/OrderSummary';
+import Spinner from '../../components/UI/Spinner/Spinner';
 
 const INGREDIENT_PRICES = {
   salad: 0.5,
@@ -24,6 +25,7 @@ class BurgerBuilder extends Component {
     totalPrice: 4,
     purchasable: false,
     purchasing: false,
+    loading: false,
   }
 
   updatePurchaseState() {
@@ -98,11 +100,17 @@ class BurgerBuilder extends Component {
       deliveryMethod: 'fastest',
     }
 
+    this.setState({loading: true});
+
     axios.post('/orders.json/', order)
         .then(res => {
+          window.setTimeout(() => {
+            this.setState({loading: false, purchasing: false});
+          }, 2000);
           console.log(res);
         })
         .catch(err => {
+          this.setState({loading: false, purchasing: false});          
           console.log(err);
         });
   }
@@ -115,15 +123,22 @@ class BurgerBuilder extends Component {
       disabledInfo[key] = disabledInfo[key] <= 0;
     }
 
+    let orderSummary = <OrderSummary
+        ingredients={this.state.ingredients}
+        price={this.state.totalPrice}
+        purchaseCancelled={this.purchaseCancelHandler}
+        purchaseContinued={this.purchaseContinueHandler}
+      />
+
+    if(!!this.state.loading){
+      orderSummary = <Spinner />;
+      console.log(orderSummary);
+    }
+
     return(
       <React.Fragment>
         <Modal show={this.state.purchasing} modalClosed={this.purchaseCancelHandler}>
-          <OrderSummary
-            ingredients={this.state.ingredients}
-            price={this.state.totalPrice}
-            purchaseCancelled={this.purchaseCancelHandler}
-            purchaseContinued={this.purchaseContinueHandler}
-          />
+          {orderSummary}
         </Modal>
         <Burger ingredients={this.state.ingredients}/>
         <BuildControls
